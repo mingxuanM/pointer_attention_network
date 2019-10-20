@@ -74,7 +74,7 @@ class Pointer_Attention(nn.Module):
         self.output_context_size = output_context_size
         self.out = nn.Linear(encoder_context_size*2 + output_context_size, 1)
         # self.softmax = nn.LogSoftmax(dim=0)
-    # input is a sequence with shape (length * encoder_context_size+output_context_size)
+    # input is a sequence with shape (length * (encoder_context_size+output_context_size))
     def forward(self, encoder_context, output_context):
         output_context = output_context.repeat(encoder_context.size(0),1)
         full_context = torch.cat([encoder_context,output_context], dim=1)
@@ -140,11 +140,11 @@ def train(epoch_num=100, data_size=20000, batch_size=10):
             hidden = encoder.initHidden()
             output_hidden = output_encoder.initHidden()
 
-            encoded_context, hidden = encoder.forward(batch, hidden, batch_length) # length * batch_size * (2 * hidden_size)
+            encoded_context, hidden = encoder(batch, hidden, batch_length) # length * batch_size * (2 * hidden_size)
 
             for t in range(max_length):
 
-                output_context, output_hidden = output_encoder.forward(preditions, output_hidden) # length * batch_size * hidden_size
+                output_context, output_hidden = output_encoder(preditions, output_hidden) # length * batch_size * hidden_size
                 output_context = output_context[-1] # batch_size * hidden_size
 
                 for b in range(batch_size):
@@ -152,7 +152,7 @@ def train(epoch_num=100, data_size=20000, batch_size=10):
                         continue
                     sequence_context = encoded_context[:,b,:] # length * (2 * hidden_size)
                     output_c = output_context[b,:] # hidden_size
-                    attention_weight = pointer_attention.forward(sequence_context, output_c) # length * 1
+                    attention_weight = pointer_attention(sequence_context, output_c) # length * 1
                     _, predition = torch.max(attention_weight)
                     pred_label[t,b] = predition
                     preditions[t,b] = batch[t,b]
